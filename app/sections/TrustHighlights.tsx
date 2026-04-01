@@ -3,129 +3,112 @@
 import { useEffect, useRef, useState } from "react";
 import { Users, Calendar, UserCheck, Award } from "lucide-react";
 
-const highlights = [
-  {
-    icon: Users,
-    number: 50000,
-    suffix: "+",
-    label: "Patients Treated",
-  },
-  {
-    icon: Calendar,
-    number: 25,
-    suffix: "+",
-    label: "Years of Experience",
-  },
-  {
-    icon: UserCheck,
-    number: 50,
-    suffix: "+",
-    label: "Expert Doctors",
-  },
-  {
-    icon: Award,
-    number: 15,
-    suffix: "+",
-    label: "Awards Won",
-  },
-];
+function getHighlights(lang: string) {
+  return lang === "fr"
+    ? [
+        { icon: Users, number: 50000, suffix: "+", label: "Patients soignés" },
+        { icon: Calendar, number: 25, suffix: "+", label: "Années d'expérience" },
+        { icon: UserCheck, number: 50, suffix: "+", label: "Médecins experts" },
+        { icon: Award, number: 15, suffix: "", label: "Prix médicaux" },
+      ]
+    : [
+        { icon: Users, number: 50000, suffix: "+", label: "Patients Treated" },
+        { icon: Calendar, number: 25, suffix: "+", label: "Years of Experience" },
+        { icon: UserCheck, number: 50, suffix: "+", label: "Expert Doctors" },
+        { icon: Award, number: 15, suffix: "", label: "Medical Awards" },
+      ];
+}
 
-function useCountUp(end: number, duration: number = 2000, start: boolean = false) {
+function Counter({
+  end,
+  suffix = "",
+  start,
+}: {
+  end: number;
+  suffix?: string;
+  start: boolean;
+}) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
     if (!start) return;
 
-    let startTime: number | null = null;
-    let animationFrame: number;
+    let current = 0;
+    const duration = 1500;
+    const stepTime = 30;
+    const increment = Math.ceil(end / (duration / stepTime));
 
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      
-      // Easing function for smooth animation
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      setCount(Math.floor(easeOutQuart * end));
-
-      if (progress < 1) {
-        animationFrame = requestAnimationFrame(animate);
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(current);
       }
-    };
+    }, stepTime);
 
-    animationFrame = requestAnimationFrame(animate);
+    return () => clearInterval(timer);
+  }, [end, start]);
 
-    return () => cancelAnimationFrame(animationFrame);
-  }, [end, duration, start]);
-
-  return count;
+  return (
+    <span>
+      {count}
+      {suffix}
+    </span>
+  );
 }
 
-function HighlightCard({ 
-  icon: Icon, 
-  number, 
-  suffix, 
-  label, 
-  delay 
-}: { 
-  icon: typeof Users; 
-  number: number; 
-  suffix: string; 
-  label: string; 
-  delay: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
+export function TrustHighlights({ lang = "fr" }: { lang?: string }) {
   const [isVisible, setIsVisible] = useState(false);
-  const count = useCountUp(number, 2000, isVisible);
+  const sectionRef = useRef<HTMLElement>(null);
+  const highlights = getHighlights(lang);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setTimeout(() => setIsVisible(true), delay);
+          setIsVisible(true);
           observer.disconnect();
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.15 }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
     }
 
     return () => observer.disconnect();
-  }, [delay]);
+  }, []);
 
   return (
-    <div
-      ref={ref}
-      className={`group bg-white rounded-xl p-6 border border-[#E2E8F0] hover:border-[#0F6CBD]/30 hover:shadow-lg transition-all duration-300 text-center ${
-        isVisible ? "animate-fade-in-up" : "opacity-0"
-      }`}
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-[#E6F0FA] group-hover:bg-[#0F6CBD] flex items-center justify-center transition-colors duration-300">
-        <Icon className="w-7 h-7 text-[#0F6CBD] group-hover:text-white transition-colors duration-300" />
-      </div>
-      <div className="text-3xl sm:text-4xl font-bold text-[#0F172A] mb-1">
-        {count.toLocaleString()}{suffix}
-      </div>
-      <div className="text-[#475569] font-medium">{label}</div>
-    </div>
-  );
-}
-
-export function TrustHighlights() {
-  return (
-    <section className="py-16 bg-white">
+    <section ref={sectionRef} className="py-10 bg-white border-y border-[#E2E8F0]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {highlights.map((highlight, index) => (
-            <HighlightCard
-              key={highlight.label}
-              {...highlight}
-              delay={index * 100}
-            />
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          {highlights.map((item, index) => {
+            const Icon = item.icon;
+
+            return (
+              <div
+                key={item.label}
+                className={`text-center transition-all duration-700 ${
+                  isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                }`}
+                style={{ transitionDelay: `${index * 100}ms` }}
+              >
+                <div className="mx-auto w-14 h-14 rounded-full bg-[#E6F0FA] flex items-center justify-center mb-4">
+                  <Icon className="w-6 h-6 text-[#0F6CBD]" />
+                </div>
+                <div className="text-3xl sm:text-4xl font-bold text-[#0F172A]">
+                  <Counter end={item.number} suffix={item.suffix} start={isVisible} />
+                </div>
+                <p className="mt-2 text-sm sm:text-base text-[#475569]">
+                  {item.label}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
